@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Files2Serve</title>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <main class="mx-auto flex min-h-screen max-w-3xl items-center px-6 py-12">
+        <section class="w-full rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-2xl shadow-slate-950/50 sm:p-12">
+            <div class="mb-10">
+                <p class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-400">Files2Serve</p>
+                <h1 class="text-4xl font-bold tracking-tight text-white sm:text-5xl">Datei teilen</h1>
+                <p class="mt-4 max-w-xl text-base leading-7 text-slate-400">Lade eine Datei hoch und hinterlege die Informationen für die Freigabe.</p>
+            </div>
+
+            <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+                <label class="mb-3 block text-sm font-medium text-slate-200" for="file">Datei auswählen</label>
+                <input class="block w-full cursor-pointer rounded-lg border border-slate-700 bg-slate-950 text-sm text-slate-400 file:mr-4 file:border-0 file:border-r file:border-slate-700 file:bg-slate-800 file:px-4 file:py-3 file:font-medium file:text-cyan-300 hover:border-slate-600" id="file" name="file" type="file" required>
+
+                <div id="metadata-fields" class="mt-8 hidden space-y-5 border-t border-slate-800 pt-8">
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-200" for="title">Titel</label>
+                        <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400" id="title" name="title" type="text" required>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-200" for="item-id">ID</label>
+                        <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400" id="item-id" name="id" type="text">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-200" for="password">Passwort</label>
+                        <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400" id="password" name="password" type="password">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-200" for="expire_date">Ablaufdatum</label>
+                        <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400" id="expire_date" name="expiry_date" type="text" pattern="\d{4}-\d{2}-\d{2}" placeholder="YYYY-MM-DD">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-200" for="description">Beschreibung</label>
+                        <textarea class="min-h-28 w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400" id="description" name="description"></textarea>
+                    </div>
+                    <button class="inline-flex items-center rounded-lg bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-900" type="submit">Upload bestätigen</button>
+                </div>
+
+            </form>
+        </section>
+    </main>
+    <script>
+        const fileInput = document.getElementById("file");
+        const metadataFields = document.getElementById("metadata-fields");
+        const expireDate = document.getElementById("expire_date");
+
+        function validateExpireDate() {
+            const value = expireDate.value.trim();
+            expireDate.setCustomValidity("");
+
+            if (!value) {
+                return;
+            }
+
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                expireDate.setCustomValidity("Bitte das Ablaufdatum im Format YYYY-MM-DD eingeben.");
+                return;
+            }
+
+            const [year, month, day] = value.split("-").map(Number);
+            const expiry = new Date(year, month - 1, day);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (
+                expiry.getFullYear() !== year
+                || expiry.getMonth() !== month - 1
+                || expiry.getDate() !== day
+            ) {
+                expireDate.setCustomValidity("Bitte ein gültiges Ablaufdatum eingeben.");
+            } else if (expiry <= today) {
+                expireDate.setCustomValidity("Das Ablaufdatum muss in der Zukunft liegen.");
+            }
+        }
+
+        expireDate.addEventListener("input", validateExpireDate);
+        expireDate.addEventListener("change", validateExpireDate);
+
+        fileInput.addEventListener("change", () => {
+            if (!fileInput.files.length) {
+                return;
+            }
+
+            metadataFields.classList.remove("hidden");
+            metadataFields.scrollIntoView({ behavior: "smooth", block: "start" });
+            document.getElementById("title").focus();
+        });
+    </script>
+</body>
+</html>
