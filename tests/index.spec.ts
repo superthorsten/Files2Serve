@@ -12,7 +12,8 @@ test("zeigt Files2Serve auf der Startseite an", async ({ page }) => {
 
 test("Eine große Datei hochladen", async ({ page }) => {
   
-  const FILENAME = "Der_lange_Anlauf.webm";
+  // const FILENAME = "Der_lange_Anlauf.webm"; // 1,2 GB
+  const FILENAME = "Boeckenfoerde-Diktum.pdf";
 
   const uploadsDirectory = path.resolve(__dirname, "..", "uploads");
   const filePath = path.resolve(__dirname, "..", "testdata", FILENAME);
