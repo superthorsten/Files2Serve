@@ -7,6 +7,8 @@ test("zeigt Files2Serve auf der Startseite an", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByText("Files2Serve", { exact: true })).toBeVisible();
+  await expect(page.locator("#upload-form")).toHaveCount(0);
+  await expect(page.locator("#download-hash")).toBeVisible();
 });
 
 
@@ -19,12 +21,12 @@ test("Eine große Datei hochladen", async ({ page }) => {
   const filePath = path.resolve(__dirname, "..", "testdata", FILENAME);
   const entriesBeforeUpload = await readdir(uploadsDirectory);
 
-  await page.goto("/");
+  await page.goto("/internal-admin");
   await page.locator("#file").setInputFiles(filePath);
   await page.locator("#title").fill("Der lange Anlauf");
 
   await Promise.all([
-    page.waitForURL("**/"),
+    page.waitForURL("**/internal-admin"),
     page.getByRole("button", { name: "Upload bestätigen" }).click(),
   ]);
 
@@ -34,11 +36,10 @@ test("Eine große Datei hochladen", async ({ page }) => {
     (entry) => entry.isDirectory() && !entriesBeforeUpload.includes(entry.name),
   );
 
- 
   expect(uploadDirectory).toBeDefined();
   const uploadedFilePath = path.join(uploadsDirectory, uploadDirectory!.name, FILENAME);
+  const metadataFilePath = path.join(uploadsDirectory, `${uploadDirectory!.name}.toml`);
 
-  
   
   try {
     // Check, ob vorhanden
@@ -47,15 +48,15 @@ test("Eine große Datei hochladen", async ({ page }) => {
     }, {
       timeout: 60_000,
     }).toBe(true);
+    const metadataFile = await readFile(metadataFilePath, "utf-8");
+    expect(metadataFile).not.toContain("password =");
   } finally {
     // Daten wieder löschen, damit der Test wiederholt werden kann
     await rm(path.join(uploadsDirectory, uploadDirectory!.name), { recursive: true, force: true });
-    await rm(path.join(uploadsDirectory, `${uploadDirectory!.name}.toml`), { force: true });
+    await rm(metadataFilePath, { force: true });
   }
   
 });
-
-
 
 
 test("Datei mit allen Metadaten hochladen", async ({ page }) => {
@@ -72,16 +73,17 @@ test("Datei mit allen Metadaten hochladen", async ({ page }) => {
   const filePath = path.resolve(__dirname, "..", "testdata", FILENAME);
   const entriesBeforeUpload = await readdir(uploadsDirectory);
 
-  await page.goto("/");
+  await page.goto("/internal-admin");
   await page.locator("#file").setInputFiles(filePath);
   await page.locator("#title").fill(metadata.title);
   await page.locator("#item-id").fill(metadata.id);
+  await page.locator("#password-enabled").check();
   await page.locator("#password").fill(metadata.password);
   await page.locator("#expire_date").fill(metadata.expiry_date);
   await page.locator("#description").fill(metadata.description);
 
   await Promise.all([
-    page.waitForURL("**/"),
+    page.waitForURL("**/internal-admin"),
     page.getByRole("button", { name: "Upload bestätigen" }).click(),
   ]);
 
@@ -95,6 +97,12 @@ test("Datei mit allen Metadaten hochladen", async ({ page }) => {
   const metadataFilePath = path.join(uploadsDirectory, `${uploadDirectory!.name}.toml`);
   const uploadedFilePath = path.join(uploadsDirectory, uploadDirectory!.name, FILENAME);
 
+  const fileRow = page.locator("tr").filter({ hasText: metadata.title });
+  await expect(page.locator("dialog")).toHaveCount(1);
+  await fileRow.getByRole("button", { name: "Details" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("dialog")).toContainText(metadata.password);
+  await expect(page.getByRole("dialog")).toContainText(uploadDirectory!.name);
 
   // Test falsche Metadaten
 
@@ -113,6 +121,7 @@ test("Datei mit allen Metadaten hochladen", async ({ page }) => {
         `expiry_date = ${JSON.stringify(metadata.expiry_date)}`,
         `description = ${JSON.stringify(metadata.description)}`,
         `filename = ${JSON.stringify(FILENAME)}`,
+        `upload_hash = ${JSON.stringify(uploadDirectory!.name)}`,
       ].every((line) => metadataFile.includes(line));
     }).toBe(true);
   } finally {

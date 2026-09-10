@@ -4,11 +4,11 @@ Die Daten sollen sicher transportiert werden. Beim zur Verfügung stellen soll d
 
 ## Interne Verwaltung
 
-Die interne Verwaltung ist unter `/internal-admin` erreichbar und wird nicht in der normalen Benutzeroberfläche verlinkt. Der Zugriff ist nur mit HTTP Basic Authentication möglich. Vor dem Start müssen die Zugangsdaten gesetzt werden:
+Die interne Verwaltung ist unter `/internal-admin` erreichbar und wird nicht in der normalen Benutzeroberfläche verlinkt. Datei-Uploads und die Verwaltung vorhandener Dateien befinden sich vollständig in diesem geschützten Bereich. Der Zugriff ist nur mit HTTP Basic Authentication möglich. Vor dem Start müssen die Zugangsdaten gesetzt werden:
 
 ```bash
 export ADMIN_USERNAME=admin
-export ADMIN_PASSWORD='ein-langes-zufälliges-passwort'
+export ADMIN_PASSWORD='insecure'
 uvicorn app:app --reload
 ```
 

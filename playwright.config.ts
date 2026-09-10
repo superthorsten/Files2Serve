@@ -12,6 +12,10 @@ export default defineConfig({
   },
   webServer: {
     command: ".venv/bin/uvicorn app:app --host 127.0.0.1 --port 8000",
+    env: {
+      ADMIN_USERNAME: "admin",
+      ADMIN_PASSWORD: "test",
+    },
     url: "http://127.0.0.1:8000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
@@ -19,7 +23,10 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        httpCredentials: { username: "admin", password: "test" },
+      },
     },
   ],
 });

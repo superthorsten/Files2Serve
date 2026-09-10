@@ -13,6 +13,43 @@
             <h1 class="text-3xl font-bold tracking-tight text-white">Interne Verwaltung</h1>
         </header>
 
+        <section class="mb-8 rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-2xl shadow-slate-950/50">
+            <h2 class="text-2xl font-bold tracking-tight text-white">Datei teilen</h2>
+            <p class="mt-3 text-slate-400">Lade eine Datei hoch und hinterlege die Informationen für die Freigabe.</p>
+
+            <form id="upload-form" class="mt-8" action="/upload" method="post" enctype="multipart/form-data">
+                <label class="mb-3 block text-sm font-medium text-slate-200" for="file">Datei auswählen</label>
+                <input class="block w-full cursor-pointer rounded-lg border border-slate-700 bg-slate-950 text-sm text-slate-400 file:mr-4 file:border-0 file:border-r file:border-slate-700 file:bg-slate-800 file:px-4 file:py-3 file:font-medium file:text-cyan-300 hover:border-slate-600" id="file" name="file" type="file" required>
+
+                <div id="metadata-fields" class="mt-8 hidden space-y-5 border-t border-slate-800 pt-8">
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-200" for="title">Titel</label>
+                        <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400" id="title" name="title" type="text" required>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-200" for="item-id">ID</label>
+                        <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400" id="item-id" name="id" type="text">
+                    </div>
+                    <div>
+                        <label class="flex items-center gap-3 text-sm font-medium text-slate-200" for="password-enabled">
+                            <input class="h-4 w-4 rounded border-slate-700 bg-slate-950 text-cyan-400 focus:ring-cyan-400" id="password-enabled" type="checkbox">
+                            Passwortschutz aktivieren
+                        </label>
+                        <input class="mt-3 w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-50" id="password" name="password" type="password" autocomplete="new-password" disabled>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-200" for="expire_date">Ablaufdatum</label>
+                        <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400" id="expire_date" name="expiry_date" type="text" pattern="\d{4}-\d{2}-\d{2}" placeholder="YYYY-MM-DD">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-200" for="description">Beschreibung</label>
+                        <textarea class="min-h-28 w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400" id="description" name="description"></textarea>
+                    </div>
+                    <button class="inline-flex items-center rounded-lg bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-900" type="submit">Upload bestätigen</button>
+                </div>
+            </form>
+        </section>
+
         <section class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-slate-950/50">
             {% if files %}
             <div class="overflow-x-auto">
@@ -34,9 +71,12 @@
                             <td class="px-5 py-4 text-slate-400">{{ file.item_id }}</td>
                             <td class="px-5 py-4 text-slate-400">{{ file.expiry_date or "Keine" }}</td>
                             <td class="px-5 py-4">
-                                <form action="/internal-admin/{{ file.hash }}/delete" method="post">
-                                    <button class="rounded-lg border border-red-500/50 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/10" type="submit">Löschen</button>
-                                </form>
+                                <div class="flex items-center gap-2">
+                                    <button class="rounded-lg border border-cyan-400/50 px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-400/10" type="button" data-dialog-target="details-dialog" data-detail-title="{{ file.title }}" data-detail-filename="{{ file.filename }}" data-detail-item-id="{{ file.item_id }}" data-detail-password="{{ file.password }}" data-detail-expiry-date="{{ file.expiry_date }}" data-detail-description="{{ file.description }}" data-detail-hash="{{ file.hash }}">Details</button>
+                                    <form action="/internal-admin/{{ file.hash }}/delete" method="post">
+                                        <button class="rounded-lg border border-red-500/50 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/10" type="submit">Löschen</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -47,6 +87,104 @@
             <p class="px-5 py-8 text-slate-400">Keine Uploads vorhanden.</p>
             {% endif %}
         </section>
+
+        <dialog id="details-dialog" class="w-[min(32rem,calc(100%-2rem))] rounded-2xl border border-slate-700 bg-slate-900 p-0 text-slate-100 shadow-2xl shadow-black/60 backdrop:bg-slate-950/75">
+            <div class="p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400">Datei-Details</p>
+                        <h2 id="details-title-heading" class="mt-2 text-xl font-bold text-white"></h2>
+                    </div>
+                    <button class="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800" type="button" data-dialog-close aria-label="Details schließen">Schließen</button>
+                </div>
+                <dl class="mt-6 divide-y divide-slate-800 text-sm">
+                    <div class="grid grid-cols-[minmax(8rem,auto)_1fr] gap-4 py-3"><dt class="text-slate-400">Titel</dt><dd id="details-title" class="break-words text-right text-white"></dd></div>
+                    <div class="grid grid-cols-[minmax(8rem,auto)_1fr] gap-4 py-3"><dt class="text-slate-400">Datei</dt><dd id="details-filename" class="break-words text-right text-white"></dd></div>
+                    <div class="grid grid-cols-[minmax(8rem,auto)_1fr] gap-4 py-3"><dt class="text-slate-400">ID</dt><dd id="details-item-id" class="break-words text-right text-white"></dd></div>
+                    <div class="grid grid-cols-[minmax(8rem,auto)_1fr] gap-4 py-3"><dt class="text-slate-400">Passwort</dt><dd id="details-password" class="break-words text-right text-white"></dd></div>
+                    <div class="grid grid-cols-[minmax(8rem,auto)_1fr] gap-4 py-3"><dt class="text-slate-400">Ablaufdatum</dt><dd id="details-expiry-date" class="break-words text-right text-white"></dd></div>
+                    <div class="grid grid-cols-[minmax(8rem,auto)_1fr] gap-4 py-3"><dt class="text-slate-400">Beschreibung</dt><dd id="details-description" class="whitespace-pre-wrap break-words text-right text-white"></dd></div>
+                    <div class="grid grid-cols-[minmax(8rem,auto)_1fr] gap-4 py-3"><dt class="text-slate-400">Upload-Hash</dt><dd id="details-hash" class="break-all text-right font-mono text-xs text-white"></dd></div>
+                </dl>
+            </div>
+        </dialog>
     </main>
+    <script>
+        const fileInput = document.getElementById("file");
+        const metadataFields = document.getElementById("metadata-fields");
+        const expireDate = document.getElementById("expire_date");
+        const passwordEnabled = document.getElementById("password-enabled");
+        const passwordInput = document.getElementById("password");
+        const detailsDialog = document.getElementById("details-dialog");
+
+        function validateExpireDate() {
+            const value = expireDate.value.trim();
+            expireDate.setCustomValidity("");
+
+            if (!value) {
+                return;
+            }
+
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                expireDate.setCustomValidity("Bitte das Ablaufdatum im Format YYYY-MM-DD eingeben.");
+                return;
+            }
+
+            const [year, month, day] = value.split("-").map(Number);
+            const expiry = new Date(year, month - 1, day);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (
+                expiry.getFullYear() !== year
+                || expiry.getMonth() !== month - 1
+                || expiry.getDate() !== day
+            ) {
+                expireDate.setCustomValidity("Bitte ein gültiges Ablaufdatum eingeben.");
+            } else if (expiry <= today) {
+                expireDate.setCustomValidity("Das Ablaufdatum muss in der Zukunft liegen.");
+            }
+        }
+
+        expireDate.addEventListener("input", validateExpireDate);
+        expireDate.addEventListener("change", validateExpireDate);
+
+        passwordEnabled.addEventListener("change", () => {
+            passwordInput.disabled = !passwordEnabled.checked;
+            if (!passwordEnabled.checked) {
+                passwordInput.value = "";
+            }
+        });
+
+        fileInput.addEventListener("change", () => {
+            if (!fileInput.files.length) {
+                return;
+            }
+
+            metadataFields.classList.remove("hidden");
+            metadataFields.scrollIntoView({ behavior: "smooth", block: "start" });
+            document.getElementById("title").focus();
+        });
+
+        document.querySelectorAll("[data-dialog-target]").forEach((button) => {
+            button.addEventListener("click", () => {
+                document.getElementById("details-title-heading").textContent = button.dataset.detailTitle;
+                document.getElementById("details-title").textContent = button.dataset.detailTitle || "Kein Titel";
+                document.getElementById("details-filename").textContent = button.dataset.detailFilename || "Keine Datei";
+                document.getElementById("details-item-id").textContent = button.dataset.detailItemId || "Keine";
+                document.getElementById("details-password").textContent = button.dataset.detailPassword || "Keines";
+                document.getElementById("details-expiry-date").textContent = button.dataset.detailExpiryDate || "Keines";
+                document.getElementById("details-description").textContent = button.dataset.detailDescription || "Keine";
+                document.getElementById("details-hash").textContent = button.dataset.detailHash;
+                detailsDialog.showModal();
+            });
+        });
+
+        document.querySelectorAll("[data-dialog-close]").forEach((button) => {
+            button.addEventListener("click", () => {
+                detailsDialog.close();
+            });
+        });
+    </script>
 </body>
 </html>

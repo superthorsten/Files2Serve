@@ -33,6 +33,21 @@ def read_root(request: Request):
 	return templates.TemplateResponse(request=request, name="index.html")
 
 
+def require_admin(credentials: HTTPBasicCredentials = Depends(security)) -> str:
+	if not ADMIN_PASSWORD:
+		raise HTTPException(status_code=503, detail="Admin-Bereich ist nicht konfiguriert")
+	if not (
+		secrets.compare_digest(credentials.username, ADMIN_USERNAME)
+		and secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
+	):
+		raise HTTPException(
+			status_code=401,
+			detail="Ungültige Zugangsdaten",
+			headers={"WWW-Authenticate": "Basic"},
+		)
+	return credentials.username
+
+
 @app.post("/upload")
 async def upload_file(
 	file: UploadFile = File(...),
@@ -41,15 +56,16 @@ async def upload_file(
 	password: str = Form(""),
 	expiry_date: str = Form("", alias="expiry_date"),
 	description: str = Form(""),
+	_: str = Depends(require_admin),
 ) -> RedirectResponse:
 	filename = Path(file.filename or "").name
 	if not filename:
-		return RedirectResponse(url="/", status_code=303)
+		return RedirectResponse(url="/internal-admin", status_code=303)
 	if expiry_date and (
 		not re.fullmatch(r"\d{4}-\d{2}-\d{2}", expiry_date)
 		or _is_invalid_date(expiry_date)
 	):
-		return RedirectResponse(url="/?error=expiry_date", status_code=303)
+		return RedirectResponse(url="/internal-admin?error=expiry_date", status_code=303)
 
 	upload_hash = create_hash()
 	upload_directory = UPLOADS_DIR / upload_hash
@@ -62,18 +78,20 @@ async def upload_file(
 	metadata = {
 		"title": title,
 		"id": item_id,
-		"password": password,
 		"expiry_date": expiry_date,
 		"description": description,
 		"filename": filename,
+		"upload_hash": upload_hash,
 	}
+	if password.strip():
+		metadata["password"] = password
 	metadata_file.write_text(
 		"".join(f"{key} = {json.dumps(value)}\n" for key, value in metadata.items()),
 		encoding="utf-8",
 	)
 
 	await file.close()
-	return RedirectResponse(url="/", status_code=303)
+	return RedirectResponse(url="/internal-admin", status_code=303)
 
 
 def _is_invalid_date(value: str) -> bool:
@@ -82,21 +100,6 @@ def _is_invalid_date(value: str) -> bool:
 	except ValueError:
 		return True
 	return expiry <= date.today()
-
-
-def require_admin(credentials: HTTPBasicCredentials = Depends(security)) -> str:
-	if not ADMIN_PASSWORD:
-		raise HTTPException(status_code=503, detail="Admin-Bereich ist nicht konfiguriert")
-	if not (
-		secrets.compare_digest(credentials.username, ADMIN_USERNAME)
-		and secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
-	):
-		raise HTTPException(
-		status_code=401,
-		 detail="Ungültige Zugangsdaten",
-		headers={"WWW-Authenticate": "Basic"},
-	)
-	return credentials.username
 
 
 def _admin_files() -> list[dict[str, str]]:
@@ -113,6 +116,7 @@ def _admin_files() -> list[dict[str, str]]:
 				"hash": upload_hash,
 				"title": str(metadata.get("title", "")),
 				"item_id": str(metadata.get("id", "")),
+				"password": str(metadata.get("password", "")),
 				"filename": str(metadata.get("filename", "")),
 				"expiry_date": str(metadata.get("expiry_date", "")),
 				"description": str(metadata.get("description", "")),
