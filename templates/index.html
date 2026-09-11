@@ -11,10 +11,16 @@
         <section class="w-full rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-2xl shadow-slate-950/50 sm:p-12">
             <p class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-400">Files2Serve</p>
             <h1 class="text-4xl font-bold tracking-tight text-white sm:text-5xl">Willkommen</h1>
-            <div class="mt-8 border-t border-slate-800 pt-8">
+            <form class="mt-8 border-t border-slate-800 pt-8" action="/" method="post">
                 <label class="mb-2 block text-sm font-medium text-slate-200" for="download-hash">Download-Hash</label>
-                <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400" id="download-hash" name="download_hash" type="text" placeholder="Download-Hash eingeben" autocomplete="off">
-            </div>
+                <div class="flex flex-col gap-3 sm:flex-row">
+                    <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400" id="download-hash" name="download_hash" type="text" placeholder="Download-Hash eingeben" autocomplete="off" required>
+                    <button class="rounded-lg bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-900" type="submit">Anzeigen</button>
+                </div>
+                {% if error %}
+                <p class="mt-3 text-sm font-semibold text-red-400" role="alert">{{ error }}</p>
+                {% endif %}
+            </form>
         </section>
     </main>
 </body>

@@ -11,7 +11,7 @@ import shutil
 
 import uvicorn
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import tomli as tomllib
@@ -30,7 +30,89 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 
 @app.get("/")
 def read_root(request: Request):
-	return templates.TemplateResponse(request=request, name="index.html")
+	return templates.TemplateResponse(request=request, name="index.html", context={"error": ""})
+
+
+@app.post("/")
+def submit_download_hash(request: Request, download_hash: str = Form("")):
+	upload_hash = download_hash.strip().removesuffix(".toml")
+	try:
+		_load_download_metadata(upload_hash)
+	except HTTPException:
+		return templates.TemplateResponse(
+			request=request,
+			name="index.html",
+			context={"error": "Ungültiger Download-Hash"},
+		)
+	return RedirectResponse(url=f"/download.html?download_hash={upload_hash}", status_code=303)
+
+
+@app.get("/download.html")
+def download_page(request: Request, download_hash: str = ""):
+	upload_hash = download_hash.removesuffix(".toml")
+	metadata = _load_download_metadata(upload_hash)
+
+	return templates.TemplateResponse(
+		request=request,
+		name="download.html",
+		context=_download_page_context(metadata, upload_hash),
+	)
+
+
+@app.post("/download/{upload_hash}/file")
+def download_file(request: Request, upload_hash: str, password: str = Form("")):
+	metadata = _load_download_metadata(upload_hash)
+	stored_password = str(metadata.get("password", ""))
+	if stored_password and not secrets.compare_digest(password, stored_password):
+		return templates.TemplateResponse(
+			request=request,
+			name="download.html",
+			context=_download_page_context(metadata, upload_hash, "Ungültiges Passwort"),
+		)
+
+	if metadata.get("expiry_date") and _is_invalid_date(str(metadata["expiry_date"])):
+		raise HTTPException(status_code=410, detail="Download abgelaufen")
+
+	upload_directory = (UPLOADS_DIR / upload_hash).resolve()
+	filename = Path(str(metadata.get("filename", ""))).name
+	destination = (upload_directory / filename).resolve()
+	if (
+		upload_directory.parent != UPLOADS_DIR.resolve()
+		or not filename
+		or destination.parent != upload_directory
+		or destination.is_symlink()
+		or not destination.is_file()
+	):
+		raise HTTPException(status_code=404, detail="Datei nicht gefunden")
+
+	return FileResponse(destination, filename=filename)
+
+
+def _download_page_context(
+	metadata: dict[str, object], upload_hash: str, error: str = ""
+) -> dict[str, object]:
+	return {
+		"metadata": {
+			"title": str(metadata.get("title", "")),
+			"expiry_date": str(metadata.get("expiry_date", "")),
+			"description": str(metadata.get("description", "")),
+			"filename": str(metadata.get("filename", "")),
+			"upload_hash": upload_hash,
+			"password_required": bool(metadata.get("password", "")),
+		},
+		"error": error,
+	}
+
+
+def _load_download_metadata(upload_hash: str) -> dict[str, object]:
+	if not re.fullmatch(r"[0-9a-f]{16}", upload_hash):
+		raise HTTPException(status_code=404, detail="Datei nicht gefunden")
+
+	metadata_file = UPLOADS_DIR / f"{upload_hash}.toml"
+	try:
+		return tomllib.loads(metadata_file.read_text(encoding="utf-8"))
+	except (OSError, tomllib.TOMLDecodeError):
+		raise HTTPException(status_code=404, detail="Datei nicht gefunden")
 
 
 def require_admin(credentials: HTTPBasicCredentials = Depends(security)) -> str:
