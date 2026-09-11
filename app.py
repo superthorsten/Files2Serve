@@ -24,9 +24,9 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 app = FastAPI(title="Files2Serve", docs_url=None, redoc_url=None, openapi_url=None)
 security = HTTPBasic()
+
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
-
 
 @app.get("/")
 def read_root(request: Request):
@@ -34,8 +34,8 @@ def read_root(request: Request):
 
 
 @app.post("/")
-def submit_download_hash(request: Request, download_hash: str = Form("")):
-	upload_hash = download_hash.strip().removesuffix(".toml")
+def submit_upload_hash(request: Request, upload_hash: str = Form("")):
+	upload_hash = upload_hash.strip()
 	try:
 		_load_download_metadata(upload_hash)
 	except HTTPException:
@@ -44,12 +44,11 @@ def submit_download_hash(request: Request, download_hash: str = Form("")):
 			name="index.html",
 			context={"error": "Ungültiger Download-Hash"},
 		)
-	return RedirectResponse(url=f"/download.html?download_hash={upload_hash}", status_code=303)
+	return RedirectResponse(url=f"/download.html?upload_hash={upload_hash}", status_code=303)
 
 
 @app.get("/download.html")
-def download_page(request: Request, download_hash: str = ""):
-	upload_hash = download_hash.removesuffix(".toml")
+def download_page(request: Request, upload_hash: str = ""):
 	metadata = _load_download_metadata(upload_hash)
 
 	return templates.TemplateResponse(
@@ -106,7 +105,7 @@ def _download_page_context(
 
 def _load_download_metadata(upload_hash: str) -> dict[str, object]:
 	if not re.fullmatch(r"[0-9a-f]{16}", upload_hash):
-		raise HTTPException(status_code=404, detail="Datei nicht gefunden")
+		raise HTTPException(status_code=404, detail="Falsches Format für Download-Hash")
 
 	metadata_file = UPLOADS_DIR / f"{upload_hash}.toml"
 	try:
