@@ -12,7 +12,7 @@ import {
 
 
 test("Ablaufener Eintrag als abgelaufen markiert", async ({ page }) => {
-  const FILENAME = "Starke_Männer_schaffen_gute_Zeiten.jpeg";
+  const FILENAME = "Starke_Männer.jpeg";
   const sourceEntries = await copyTestDataUploads("Abgelaufen");
 
   // Test durchzuführen und Testdaten anschließend löschen
@@ -212,7 +212,7 @@ test("Details-Dialog Alle_Metadaten_und_Passwort", async ({ page }) => {
   const metadata = {
     title: "Weihnachten",
     id: "2",
-    password: "sexistisch",
+    password: "alleJahreWieder",
     expiry_date: "2099-12-31",
     description: "Dies ist ein sexistisches Bild. Aber keine Angst, ist nur Spa\u00df!",
     upload_hash: "a5f62c22616ad282",
