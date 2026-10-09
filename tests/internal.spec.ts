@@ -41,8 +41,8 @@ test("Ablaufener Eintrag als abgelaufen markiert", async ({ page }) => {
 // Hochladen von Dateien und checken, ob Daten vorhanden mitsamt den Einträgen in der toml-Datei. Danach wieder löschen, damit der Test wiederholt werden kann.
 test("Eine große Datei hochladen", async ({ page }) => {
   
-  // const FILENAME = "Der_lange_Anlauf.webm"; // 1,2 GB
-  const FILENAME = "Boeckenfoerde-Diktum.pdf";
+  //const FILENAME = "Langes_Video.webm"; // 1,2 GB
+  const FILENAME = "Weihnachten.jpeg"; // 1,2 GB
 
   const uploadsDirectory = path.resolve(__dirname, "..", "uploads");
   const filePath = path.resolve(__dirname, "..", "testdata", FILENAME);
@@ -91,7 +91,7 @@ test("Datei mit allen Metadaten und Passwort hochladen", async ({ page }) => {
   const metadata = {
     title: "Weihnachten",
     id: "12345",
-    password: "sexistisch",
+    password: "alleJahreWieder",
     expiry_date: "2099-12-31",
     description: "Weihnachtsbild mit allen Metadaten",
   };
