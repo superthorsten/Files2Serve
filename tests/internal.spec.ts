@@ -1,5 +1,6 @@
-import { readdir, readFile, rm } from "node:fs/promises";
+import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { randomBytes } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
 
@@ -8,6 +9,32 @@ import {
   copyTestDataUploads,
   removeDirectoryContents,
 } from "./helpers";
+
+
+test("Ablaufener Eintrag als abgelaufen markiert", async ({ page }) => {
+  const FILENAME = "Starke_Männer_schaffen_gute_Zeiten.jpeg";
+  const sourceEntries = await copyTestDataUploads("Abgelaufen");
+
+  // Test durchzuführen und Testdaten anschließend löschen
+  try {
+    // Gehe zur internen Admin-Seite, um die Details anzuzeigen
+    await page.goto("/internal-admin");
+
+    // Suche die Zeile mit dem hochgeladenen File und öffne den Details-Dialog
+    const fileRow = page.locator("tr").filter({ hasText: FILENAME });
+    
+    
+    // Testes und erstelle bei Fehlschlag einen Screetshot
+    await expect(fileRow.locator("span")).toHaveText("Abgelaufen", { timeout: 5000 }).catch(async () => {
+      await page.screenshot({ path: "screenshot.png", fullPage: true });
+      throw new Error("Test failed, screenshot saved as screenshot.png");
+    });
+  } finally {
+    console.log("Removing test data from uploads directory...");
+    await removeDirectoryContents(sourceEntries);
+  }
+
+});
 
 
 

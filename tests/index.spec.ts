@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test } from "@playwright/test";
@@ -62,6 +62,27 @@ test("Gültiger Download-Hash ohne Passwort", async ({ page }) => {
     await removeDirectoryContents(sourceEntries);
   }       
   
+});
+
+test("Abgelaufener Download zeigt keinen Download-Button und bleibt gesperrt", async ({ page }) => {
+  const sourceEntries = await copyTestDataUploads("Keine_Metadaten");
+  const uploadHash = "0679245553a40351";
+  const metadataFile = path.resolve(__dirname, "..", "uploads", `${uploadHash}.toml`);
+
+  try {
+    const metadata = await readFile(metadataFile, "utf-8");
+    await writeFile(metadataFile, metadata.replace('expiry_date = ""', 'expiry_date = "2000-01-01"'));
+
+    await page.goto(`/download.html?upload_hash=${uploadHash}`);
+
+    await expect(page.getByRole("heading", { name: "Download abgelaufen" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Datei herunterladen" })).toHaveCount(0);
+
+    const response = await page.request.post(`/download/${uploadHash}/file`);
+    expect(response.status()).toBe(410);
+  } finally {
+    await removeDirectoryContents(sourceEntries);
+  }
 });
 
 

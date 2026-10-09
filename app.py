@@ -61,6 +61,9 @@ def download_page(request: Request, upload_hash: str = ""):
 @app.post("/download/{upload_hash}/file")
 def download_file(request: Request, upload_hash: str, password: str = Form("")):
 	metadata = _load_download_metadata(upload_hash)
+	if metadata.get("expiry_date") and _is_invalid_date(str(metadata["expiry_date"])):
+		raise HTTPException(status_code=410, detail="Download abgelaufen")
+
 	stored_password = str(metadata.get("password", ""))
 	if stored_password and not secrets.compare_digest(password, stored_password):
 		return templates.TemplateResponse(
@@ -68,9 +71,6 @@ def download_file(request: Request, upload_hash: str, password: str = Form("")):
 			name="download.html",
 			context=_download_page_context(metadata, upload_hash, "Ungültiges Passwort"),
 		)
-
-	if metadata.get("expiry_date") and _is_invalid_date(str(metadata["expiry_date"])):
-		raise HTTPException(status_code=410, detail="Download abgelaufen")
 
 	upload_directory = (UPLOADS_DIR / upload_hash).resolve()
 	filename = Path(str(metadata.get("filename", ""))).name
@@ -90,15 +90,17 @@ def download_file(request: Request, upload_hash: str, password: str = Form("")):
 def _download_page_context(
 	metadata: dict[str, object], upload_hash: str, error: str = ""
 ) -> dict[str, object]:
+	expiry_date = str(metadata.get("expiry_date", ""))
 	return {
 		"metadata": {
 			"title": str(metadata.get("title", "")),
-			"expiry_date": str(metadata.get("expiry_date", "")),
+			"expiry_date": expiry_date,
 			"description": str(metadata.get("description", "")),
 			"filename": str(metadata.get("filename", "")),
 			"upload_hash": upload_hash,
 			"password_required": bool(metadata.get("password", "")),
 		},
+		"expired": bool(expiry_date) and _is_invalid_date(expiry_date),
 		"error": error,
 	}
 
@@ -183,7 +185,15 @@ def _is_invalid_date(value: str) -> bool:
 	return expiry <= date.today()
 
 
-def _admin_files() -> list[dict[str, str]]:
+def _is_expired(value: str) -> bool:
+	try:
+		expiry = date.fromisoformat(value)
+	except ValueError:
+		return False
+	return expiry < date.today()
+
+
+def _admin_files() -> list[dict[str, object]]:
 	files = []
 	for metadata_file in UPLOADS_DIR.glob("*.toml"):
 		upload_hash = metadata_file.stem
@@ -193,16 +203,18 @@ def _admin_files() -> list[dict[str, str]]:
 			metadata = tomllib.loads(metadata_file.read_text(encoding="utf-8"))
 		except (OSError, tomllib.TOMLDecodeError):
 			continue
+		expiry_date = str(metadata.get("expiry_date", ""))
 		files.append({
 				"hash": upload_hash,
 				"title": str(metadata.get("title", "")),
 				"item_id": str(metadata.get("id", "")),
 				"password": str(metadata.get("password", "")),
 				"filename": str(metadata.get("filename", "")),
-				"expiry_date": str(metadata.get("expiry_date", "")),
+				"expiry_date": expiry_date,
+				"expired": _is_expired(expiry_date),
 				"description": str(metadata.get("description", "")),
 			})
-	return sorted(files, key=lambda item: item["hash"])
+	return sorted(files, key=lambda item: str(item["hash"]))
 
 
 @app.get("/internal-admin")
