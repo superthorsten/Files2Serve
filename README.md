@@ -8,7 +8,7 @@ Files2Serve ist eine kleine FastAPI-Anwendung zum internen Hochladen und Teilen 
 - Downloads zeigen Titel, Dateiname, Beschreibung und Ablaufdatum an. Für passwortgeschützte Dateien wird vor dem Download das Passwort abgefragt.
 - Downloads mit einem abgelaufenen oder am aktuellen Tag endenden Ablaufdatum werden abgewiesen.
 - Unter `/internal-admin` können angemeldete Administratoren Dateien hochladen, Metadaten einsehen und Uploads löschen. Der Verwaltungsbereich ist nicht von der öffentlichen Startseite aus verlinkt.
-- Zu den optionalen Metadaten gehören ID, Beschreibung, Passwort und Ablaufdatum. Das Ablaufdatum muss als `YYYY-MM-DD` angegeben werden und in der Zukunft liegen.
+- Zu den optionalen Metadaten gehören ID, Beschreibung, Passwort und Ablaufdatum.
 
 ## Installation und Start
 
@@ -47,9 +47,13 @@ Die End-to-End-Tests verwenden Playwright. Node-Abhängigkeiten installieren und
 npm install
 npx playwright install chromium
 npm run test:e2e
-```
+``` 
 
 Playwright startet dafür Uvicorn auf `127.0.0.1:8000` und verwendet die Testzugangsdaten `admin` / `test`.
+
+Hinweis: 
+
+Tests schlagen fehl, weil Testdaten von mir nicht hochgeladen wurden. Diesen müssen unter testdata selbst angelegt und Testfunktionen gegebenenfalls angepasst werden. 
 
 ## Sicherheitshinweise
 
